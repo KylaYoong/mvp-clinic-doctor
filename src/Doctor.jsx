@@ -6,6 +6,8 @@ import SKPLogo from "./SKP-logo.jpg";
 
 function Doctor() {
     const [patients, setPatients] = useState([]);
+    const [awaitingCount, setAwaitingCount] = useState(0);
+    const [endedCount, setEndedCount] = useState(0);
     const [selectedPatient, setSelectedPatient] = useState(null);
     const [selectedNote, setSelectedNote] = useState("");
     const [customNote, setCustomNote] = useState("");
@@ -18,7 +20,6 @@ function Doctor() {
 
         const q = query(
             patientsRef,
-            where("status", "in", ["waiting", "being attended"]),
             where("timestamp", ">=", today), // Filter to include only today's data
             orderBy("timestamp", "asc")
         );
@@ -29,6 +30,12 @@ function Doctor() {
                 ...doc.data(),
             }));
             setPatients(fetchedPatients);
+
+            // Calculate counts
+            const awaiting = fetchedPatients.filter((p) => p.status === "waiting" || p.status === "being attended").length;
+            const ended = fetchedPatients.filter((p) => p.status === "completed").length;
+            setAwaitingCount(awaiting);
+            setEndedCount(ended);
         });
 
         return () => unsubscribe();
@@ -77,6 +84,17 @@ function Doctor() {
             <div className="header">
                 <img src={SKPLogo} alt="SKP Logo" className="logo" />
                 <h2 className="header-title">Doctor Interface</h2>
+            </div>
+
+            <div className="summary-section">
+                <div className="summary-box awaiting">
+                    <h3>Awaiting Visits</h3>
+                    <p>{awaitingCount}</p>
+                </div>
+                <div className="summary-box ended">
+                    <h3>Ended Visits</h3>
+                    <p>{endedCount}</p>
+                </div>
             </div>
 
             <div className="patients-section">

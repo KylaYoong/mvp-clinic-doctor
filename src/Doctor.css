@@ -6,15 +6,6 @@ body {
   background-color: #f4f4f4; /* Match Admin background */
 }
 
-.doctor-container {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  background-color: #ffffff;
-  width: 1000px; /* Set a fixed width for the container */
-  margin: 100px auto 0;
-}
-
 /* Header Section */
 .header {
   position: fixed;
@@ -46,6 +37,53 @@ body {
   max-height: 100%;
 }
 
+
+.summary-section {
+  display: flex;
+  justify-content: space-around;
+  padding: 10px 0;
+  background-color: #f4f4f4; /* Match Admin background */
+}
+
+.summary-box {
+  text-align: center;
+  padding: 10px 20px;
+  border-radius: 8px;
+  background-color: #ffffff;
+  box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.summary-box h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  /* font-size: 1.2rem; */
+  color: #333;
+}
+
+.summary-box p {
+  margin: 5px 0 0;
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #007bff;
+}
+
+.summary-box.awaiting p {
+  color: #f0ad4e;
+}
+
+.summary-box.ended p {
+  color: #5cb85c;
+}
+
+
+.doctor-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: #ffffff;
+  width: 1000px; /* Set a fixed width for the container */
+  margin: 100px auto 0;
+}
 
 .table-wrapper {
   display: flex;
@@ -94,6 +132,8 @@ body {
 .patient-table button:hover {
   background-color: #0056b3;
 }
+
+
 
 /* Popup */
 .popup {
