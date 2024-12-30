@@ -14,6 +14,8 @@ function Doctor() {
     const [selectedConditions, setSelectedConditions] = useState([]);
     const [selectedMedicines, setSelectedMedicines] = useState([]);
     const [notes, setNotes] = useState("");
+    const [timeIn, setTimeIn] = useState(null);
+    const [timeOut, setTimeOut] = useState(null);
 
     useEffect(() => {
         // Fetch patients
@@ -63,9 +65,59 @@ function Doctor() {
 
     const handleSelectPatient = (patient) => {
         setSelectedPatient(patient);
+        setTimeIn(patient.timeIn || null);
+        setTimeOut(patient.timeOut || null);
         setSelectedConditions([]);
         setSelectedMedicines([]);
         setNotes(""); // Clear notes for new patient
+    };
+
+    const handleTimeIn = async () => {
+      if (!selectedPatient) return;
+
+      const currentTime = new Date();
+      const formattedTime = formatDateWithTimeZone(currentTime);
+  
+      setTimeIn(formattedTime);
+  
+      try {
+          const patientRef = doc(db, "queue", selectedPatient.id);
+          await updateDoc(patientRef, { timeIn: formattedTime });
+      } catch (error) {
+          console.error("Failed to set Time In:", error);
+      }
+    };
+
+    const handleTimeOut = async () => {
+      if (!selectedPatient) return;
+
+      const currentTime = new Date();
+      const formattedTime = formatDateWithTimeZone(currentTime);
+  
+      setTimeOut(formattedTime);
+  
+      try {
+          const patientRef = doc(db, "queue", selectedPatient.id);
+          await updateDoc(patientRef, { timeOut: formattedTime });
+      } catch (error) {
+          console.error("Failed to set Time Out:", error);
+      }
+    };
+
+    // Utility function to format date
+    const formatDateWithTimeZone = (date) => {
+      const options = {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+          timeZone: "Asia/Kuala_Lumpur", // Use the desired time zone
+          timeZoneName: "short", // Includes UTC+8 in the output
+          hour12: true, // Ensures AM/PM format
+      };
+      return new Intl.DateTimeFormat("en-US", options).format(date);
     };
 
     const handleSaveNotes = async () => {
@@ -170,6 +222,12 @@ function Doctor() {
                         <h3>Details for {selectedPatient.name}</h3>
                         <p><strong>Employee ID:</strong> {selectedPatient.employeeID}</p>
                         <p><strong>Name:</strong> {selectedPatient.name}</p>
+                        <p><strong>Gender:</strong> {selectedPatient.gender}</p>
+                        <p><strong>Time In:</strong> {timeIn || "Not set"}</p>
+                        <p><strong>Time Out:</strong> {timeOut || "Not set"}</p>
+
+                        <button onClick={handleTimeIn}>Record Time In</button>
+                        <button onClick={handleTimeOut}>Record Time Out</button>
 
                         <h4>Select Conditions:</h4>
                         {sickConditions.map((condition) => (
