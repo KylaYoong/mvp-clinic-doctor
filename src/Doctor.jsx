@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { db } from "./firebase";
-import { collection, query, where, orderBy, onSnapshot, doc, updateDoc } from "firebase/firestore";
+import { collection, getDocs, query, where, orderBy, onSnapshot, doc, updateDoc } from "firebase/firestore";
 import "./Doctor.css";
 import SKPLogo from "./SKP-logo.jpg";
 
@@ -9,18 +9,21 @@ function Doctor() {
     const [awaitingCount, setAwaitingCount] = useState(0);
     const [endedCount, setEndedCount] = useState(0);
     const [selectedPatient, setSelectedPatient] = useState(null);
-    const [selectedNote, setSelectedNote] = useState("");
-    const [customNote, setCustomNote] = useState("");
+    const [sickConditions, setSickConditions] = useState([]);
+    const [medicines, setMedicines] = useState([]);
+    const [selectedConditions, setSelectedConditions] = useState([]);
+    const [selectedMedicines, setSelectedMedicines] = useState([]);
+    const [notes, setNotes] = useState("");
 
     useEffect(() => {
+        // Fetch patients
         const patientsRef = collection(db, "queue");
-
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
         const q = query(
             patientsRef,
-            where("timestamp", ">=", today), // Filter to include only today's data
+            where("timestamp", ">=", today),
             orderBy("timestamp", "asc")
         );
 
@@ -31,7 +34,7 @@ function Doctor() {
             }));
             setPatients(fetchedPatients);
 
-            // Calculate counts
+            // Update counts
             const awaiting = fetchedPatients.filter((p) => p.status === "waiting" || p.status === "being attended").length;
             const ended = fetchedPatients.filter((p) => p.status === "completed").length;
             setAwaitingCount(awaiting);
@@ -41,26 +44,46 @@ function Doctor() {
         return () => unsubscribe();
     }, []);
 
+    useEffect(() => {
+        // Fetch conditions and medicines
+        const fetchOptions = async () => {
+            try {
+                const conditionsSnapshot = await getDocs(collection(db, "sickConditions"));
+                const medicinesSnapshot = await getDocs(collection(db, "medicines"));
+
+                setSickConditions(conditionsSnapshot.docs.map((doc) => doc.data().name));
+                setMedicines(medicinesSnapshot.docs.map((doc) => doc.data().name));
+            } catch (error) {
+                console.error("Error fetching options:", error);
+            }
+        };
+
+        fetchOptions();
+    }, []);
+
     const handleSelectPatient = (patient) => {
         setSelectedPatient(patient);
-        setSelectedNote("");
-        setCustomNote("");
+        setSelectedConditions([]);
+        setSelectedMedicines([]);
+        setNotes(""); // Clear notes for new patient
     };
 
     const handleSaveNotes = async () => {
         if (!selectedPatient) return;
 
         try {
-            const notes = selectedNote === "Others" ? customNote : selectedNote || "No Notes";
             const patientRef = doc(db, "queue", selectedPatient.id);
-            await updateDoc(patientRef, { notes });
+            await updateDoc(patientRef, {
+                conditions: selectedConditions,
+                medicines: selectedMedicines,
+                notes,
+            });
 
-            alert("Notes updated successfully!");
+            alert("Notes saved successfully!");
             setSelectedPatient(null);
-            setSelectedNote("");
-            setCustomNote("");
         } catch (error) {
-            alert("Failed to update notes. Try again.");
+            alert("Failed to save notes. Try again.");
+            console.error(error);
         }
     };
 
@@ -72,11 +95,22 @@ function Doctor() {
             await updateDoc(patientRef, { status: "completed" });
             alert("Patient marked as completed!");
             setSelectedPatient(null);
-            setSelectedNote("");
-            setCustomNote("");
         } catch (error) {
             alert("Failed to update status. Try again.");
+            console.error(error);
         }
+    };
+
+    const handleSelectCondition = (condition) => {
+        setSelectedConditions((prev) =>
+            prev.includes(condition) ? prev.filter((c) => c !== condition) : [...prev, condition]
+        );
+    };
+
+    const handleSelectMedicine = (medicine) => {
+        setSelectedMedicines((prev) =>
+            prev.includes(medicine) ? prev.filter((m) => m !== medicine) : [...prev, medicine]
+        );
     };
 
     return (
@@ -105,7 +139,7 @@ function Doctor() {
                                 <tr>
                                     <th>Queue No.</th>
                                     <th>Employee ID</th>
-                                    <th>Name</th>
+                                    <th>Gender</th>
                                     <th>Status</th>
                                     <th>Details</th>
                                 </tr>
@@ -115,7 +149,7 @@ function Doctor() {
                                     <tr key={patient.id}>
                                         <td>{patient.queueNumber}</td>
                                         <td>{patient.employeeID}</td>
-                                        <td>{patient.name}</td>
+                                        <td>{patient.gender}</td>
                                         <td>{patient.status}</td>
                                         <td>
                                             <button onClick={() => handleSelectPatient(patient)}>Details</button>
@@ -136,28 +170,43 @@ function Doctor() {
                         <h3>Details for {selectedPatient.name}</h3>
                         <p><strong>Employee ID:</strong> {selectedPatient.employeeID}</p>
                         <p><strong>Name:</strong> {selectedPatient.name}</p>
-                        <label htmlFor="notes">Select Medical Notes:</label>
-                        <select
-                            id="notes"
-                            value={selectedNote}
-                            onChange={(e) => setSelectedNote(e.target.value)}
-                        >
-                            <option value="">Select a note</option>
-                            <option value="Flu">Flu</option>
-                            <option value="Cough">Cough</option>
-                            <option value="Headache">Headache</option>
-                            <option value="Others">Others</option>
-                        </select>
-                        {selectedNote === "Others" && (
-                            <textarea
-                                value={customNote}
-                                onChange={(e) => setCustomNote(e.target.value)}
-                                placeholder="Enter custom medical notes"
-                            ></textarea>
-                        )}
-                        <button className="save-button" onClick={handleSaveNotes}>Save Notes</button>
-                        <button className="mark-completed-button" onClick={handleMarkAsCompleted}>Mark as Completed</button>
-                        <button className="close-popup" onClick={() => setSelectedPatient(null)}>Close</button>
+
+                        <h4>Select Conditions:</h4>
+                        {sickConditions.map((condition) => (
+                            <label key={condition}>
+                                <input
+                                    type="checkbox"
+                                    value={condition}
+                                    checked={selectedConditions.includes(condition)}
+                                    onChange={() => handleSelectCondition(condition)}
+                                />
+                                {condition}
+                            </label>
+                        ))}
+
+                        <h4>Select Medicines:</h4>
+                        {medicines.map((medicine) => (
+                            <label key={medicine}>
+                                <input
+                                    type="checkbox"
+                                    value={medicine}
+                                    checked={selectedMedicines.includes(medicine)}
+                                    onChange={() => handleSelectMedicine(medicine)}
+                                />
+                                {medicine}
+                            </label>
+                        ))}
+
+                        <h4>Additional Notes:</h4>
+                        <textarea
+                            placeholder="Enter additional notes (optional)"
+                            value={notes}
+                            onChange={(e) => setNotes(e.target.value)}
+                        ></textarea>
+
+                        <button onClick={handleSaveNotes}>Save</button>
+                        <button onClick={handleMarkAsCompleted}>Mark as Completed</button>
+                        <button onClick={() => setSelectedPatient(null)}>Close</button>
                     </div>
                 </div>
             )}
