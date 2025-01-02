@@ -18,33 +18,42 @@ function Doctor() {
     const [timeOut, setTimeOut] = useState(null);
 
     useEffect(() => {
-        // Fetch patients
-        const patientsRef = collection(db, "queue");
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        const q = query(
-            patientsRef,
-            where("timestamp", ">=", today),
-            orderBy("timestamp", "asc")
-        );
-
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const fetchedPatients = snapshot.docs.map((doc) => ({
+      // Fetch patients
+      const patientsRef = collection(db, "queue");
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+  
+      const q = query(
+          patientsRef,
+          where("timestamp", ">=", today),
+          orderBy("timestamp", "asc")
+      );
+  
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const fetchedPatients = snapshot.docs.map((doc) => {
+            const data = doc.data();
+            console.log("Document data:", data); // Log each document for debugging
+            return {
                 id: doc.id,
-                ...doc.data(),
-            }));
-            setPatients(fetchedPatients);
-
-            // Update counts
-            const awaiting = fetchedPatients.filter((p) => p.status === "waiting" || p.status === "being attended").length;
-            const ended = fetchedPatients.filter((p) => p.status === "completed").length;
-            setAwaitingCount(awaiting);
-            setEndedCount(ended);
+                name: data.name, // Explicitly map `name`
+                gender: data.gender, // Explicitly map `gender`
+                ...data, // Include all other fields
+            };
         });
 
-        return () => unsubscribe();
-    }, []);
+        console.log("Fetched patients:", fetchedPatients); // Debug log
+        setPatients(fetchedPatients);
+
+        // Update counts
+        const awaiting = fetchedPatients.filter((p) => p.status === "waiting" || p.status === "being attended").length;
+        const ended = fetchedPatients.filter((p) => p.status === "completed").length;
+        setAwaitingCount(awaiting);
+        setEndedCount(ended);
+    });
+
+    return () => unsubscribe();
+}, []);
+
 
     useEffect(() => {
         // Fetch conditions and medicines
@@ -64,7 +73,9 @@ function Doctor() {
     }, []);
 
     const handleSelectPatient = (patient) => {
-        setSelectedPatient(patient);
+        console.log("Selected patient details:", patient);
+        setSelectedPatient(patient); // No need for default values since data is always present
+        console.log("Patient state updated:", patient);
         setTimeIn(patient.timeIn || null);
         setTimeOut(patient.timeOut || null);
         setSelectedConditions([]);
@@ -73,51 +84,50 @@ function Doctor() {
     };
 
     const handleTimeIn = async () => {
-      if (!selectedPatient) return;
+        if (!selectedPatient) return;
 
-      const currentTime = new Date();
-      const formattedTime = formatDateWithTimeZone(currentTime);
-  
-      setTimeIn(formattedTime);
-  
-      try {
-          const patientRef = doc(db, "queue", selectedPatient.id);
-          await updateDoc(patientRef, { timeIn: formattedTime });
-      } catch (error) {
-          console.error("Failed to set Time In:", error);
-      }
+        const currentTime = new Date();
+        const formattedTime = formatDateWithTimeZone(currentTime);
+
+        setTimeIn(formattedTime);
+
+        try {
+            const patientRef = doc(db, "queue", selectedPatient.id);
+            await updateDoc(patientRef, { timeIn: formattedTime });
+        } catch (error) {
+            console.error("Failed to set Time In:", error);
+        }
     };
 
     const handleTimeOut = async () => {
-      if (!selectedPatient) return;
+        if (!selectedPatient) return;
 
-      const currentTime = new Date();
-      const formattedTime = formatDateWithTimeZone(currentTime);
-  
-      setTimeOut(formattedTime);
-  
-      try {
-          const patientRef = doc(db, "queue", selectedPatient.id);
-          await updateDoc(patientRef, { timeOut: formattedTime });
-      } catch (error) {
-          console.error("Failed to set Time Out:", error);
-      }
+        const currentTime = new Date();
+        const formattedTime = formatDateWithTimeZone(currentTime);
+
+        setTimeOut(formattedTime);
+
+        try {
+            const patientRef = doc(db, "queue", selectedPatient.id);
+            await updateDoc(patientRef, { timeOut: formattedTime });
+        } catch (error) {
+            console.error("Failed to set Time Out:", error);
+        }
     };
 
-    // Utility function to format date
     const formatDateWithTimeZone = (date) => {
-      const options = {
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
-          timeZone: "Asia/Kuala_Lumpur", // Use the desired time zone
-          timeZoneName: "short", // Includes UTC+8 in the output
-          hour12: true, // Ensures AM/PM format
-      };
-      return new Intl.DateTimeFormat("en-US", options).format(date);
+        const options = {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+            timeZone: "Asia/Kuala_Lumpur",
+            timeZoneName: "short",
+            hour12: true,
+        };
+        return new Intl.DateTimeFormat("en-US", options).format(date);
     };
 
     const handleSaveNotes = async () => {
@@ -132,7 +142,6 @@ function Doctor() {
             });
 
             alert("Notes saved successfully!");
-            setSelectedPatient(null);
         } catch (error) {
             alert("Failed to save notes. Try again.");
             console.error(error);
@@ -146,7 +155,7 @@ function Doctor() {
             const patientRef = doc(db, "queue", selectedPatient.id);
             await updateDoc(patientRef, { status: "completed" });
             alert("Patient marked as completed!");
-            setSelectedPatient(null);
+            setSelectedPatient(null); // Close popup window after marking as completed
         } catch (error) {
             alert("Failed to update status. Try again.");
             console.error(error);
@@ -191,7 +200,6 @@ function Doctor() {
                                 <tr>
                                     <th>Queue No.</th>
                                     <th>Employee ID</th>
-                                    <th>Gender</th>
                                     <th>Status</th>
                                     <th>Details</th>
                                 </tr>
@@ -201,7 +209,6 @@ function Doctor() {
                                     <tr key={patient.id}>
                                         <td>{patient.queueNumber}</td>
                                         <td>{patient.employeeID}</td>
-                                        <td>{patient.gender}</td>
                                         <td>{patient.status}</td>
                                         <td>
                                             <button onClick={() => handleSelectPatient(patient)}>Details</button>
@@ -257,7 +264,7 @@ function Doctor() {
 
                         <h4>Additional Notes:</h4>
                         <textarea
-                            placeholder="Enter additional notes (optional)"
+                            placeholder="Enter additional notes"
                             value={notes}
                             onChange={(e) => setNotes(e.target.value)}
                         ></textarea>
