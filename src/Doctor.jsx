@@ -226,10 +226,11 @@ function Doctor() {
             {selectedPatient && (
                 <div className="popup">
                     <div className="popup-content">
-                        <h3>Details for {selectedPatient.name}</h3>
+                        <h2>Details</h2>
+                        {/* <h2>Details for {selectedPatient.name}</h2> */}
                         <p><strong>Employee ID:</strong> {selectedPatient.employeeID}</p>
-                        <p><strong>Name:</strong> {selectedPatient.name}</p>
-                        <p><strong>Gender:</strong> {selectedPatient.gender}</p>
+                        {/* <p><strong>Name:</strong> {selectedPatient.name}</p> */}
+                        {/* <p><strong>Gender:</strong> {selectedPatient.gender}</p> */}
                         <p><strong>Time In:</strong> {timeIn || "Not set"}</p>
                         <p><strong>Time Out:</strong> {timeOut || "Not set"}</p>
 
